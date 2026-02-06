@@ -14,13 +14,13 @@ Extract
 
 Put in VScode or any IDEs
 
-## How to run: in the built-in terminal of your IDE type:
+## How to run: in the built-in terminal of your IDE type
 
 npm install
 
 npm run dev
 
-shift click Localhost
+ctrl + click Localhost
 
 ex:  Local:   http://localhost:3000/
 
