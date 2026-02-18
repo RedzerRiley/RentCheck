@@ -3,9 +3,10 @@ import { Package, ClipboardList, Menu } from 'lucide-react';
 interface HeaderProps {
   activeView: 'catalog' | 'tracker';
   setActiveView: (view: 'catalog' | 'tracker') => void;
+  onSignIn?: () => void;
 }
 
-export function Header({ activeView, setActiveView }: HeaderProps) {
+export function Header({ activeView, setActiveView, onSignIn }: HeaderProps) {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="container mx-auto px-4">
@@ -49,7 +50,10 @@ export function Header({ activeView, setActiveView }: HeaderProps) {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <button className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+            <button
+              onClick={onSignIn}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            >
               Sign In
             </button>
             <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
