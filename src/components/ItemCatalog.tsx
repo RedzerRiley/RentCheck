@@ -8,7 +8,7 @@ const mockItems = [
     category: 'Electronics',
     price: '$50/day',
     status: 'available',
-    image: 'professional camera equipment',
+    image: '/images/camera.jpg',
   },
   {
     id: 2,
@@ -16,7 +16,7 @@ const mockItems = [
     category: 'Tools',
     price: '$25/day',
     status: 'available',
-    image: 'power drill tools',
+    image: '/images/powerdrillset.jpg',
   },
   {
     id: 3,
@@ -24,7 +24,7 @@ const mockItems = [
     category: 'Outdoor',
     price: '$35/day',
     status: 'rented',
-    image: 'camping tent outdoor',
+    image: '/images/campingtent.jpg',
   },
   {
     id: 4,
@@ -32,7 +32,7 @@ const mockItems = [
     category: 'Electronics',
     price: '$45/day',
     status: 'available',
-    image: 'projector presentation',
+    image: '/images/projectorwithscreen.jpg',
   },
   {
     id: 5,
@@ -40,7 +40,7 @@ const mockItems = [
     category: 'Tools',
     price: '$20/day',
     status: 'available',
-    image: 'ladder construction',
+    image: '/images/ladder.jpg',
   },
   {
     id: 6,
@@ -48,7 +48,7 @@ const mockItems = [
     category: 'Electronics',
     price: '$75/day',
     status: 'rented',
-    image: 'sound system speakers',
+    image: '/images/soundsystem.jpg',
   },
 ];
 

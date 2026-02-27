@@ -20,9 +20,13 @@ export function ItemCard({ item }: ItemCardProps) {
     <>
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
         {/* Item Image */}
-        <div className="relative h-48 bg-gray-100">
+        <div className="relative h-48 bg-gray-100 overflow-hidden">
           <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-            [Item Image]
+            <img 
+            src={item.image} 
+            alt={item.name} 
+            className="w-full h-full object-cover"
+            />
           </div>
           {/* Status Badge */}
           <div className="absolute top-3 right-3">
