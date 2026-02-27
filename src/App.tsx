@@ -6,11 +6,13 @@ import { RentalTracker } from './components/RentalTracker';
 import { Footer } from './components/Footer';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
+import { AddItem } from './components/AddItem';
 
 export default function App() {
   const [activeView, setActiveView] = useState<'catalog' | 'tracker'>('catalog');
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [showAddItem, setShowAddItem] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const handleLogin = (credentials: { email: string; password: string }) => {
@@ -45,9 +47,14 @@ export default function App() {
     return <Register onRegister={handleRegister} onBack={() => setShowRegister(false)} onLoginClick={() => { setShowRegister(false); setShowLogin(true); }} />;
   }
 
+  if (showAddItem) {
+    return <AddItem onBack={() => setShowAddItem(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header
+        onAddItem={() => setShowAddItem(true)}
         activeView={activeView}
         setActiveView={setActiveView}
         onSignIn={() => setShowLogin(true)}

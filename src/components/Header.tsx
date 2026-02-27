@@ -1,13 +1,14 @@
-import { Package, ClipboardList, Menu } from 'lucide-react';
+import { Package, ClipboardList, Menu, Plus } from 'lucide-react';
 
 interface HeaderProps {
-  activeView: 'catalog' | 'tracker';
-  setActiveView: (view: 'catalog' | 'tracker') => void;
+  activeView: 'catalog' | 'tracker' | 'addItem';
+  setActiveView: (view: 'catalog' | 'tracker' | 'addItem') => void;
   onSignIn?: () => void;
   onRegister?: () => void;
+  onAddItem?: () => void;
 }
 
-export function Header({ activeView, setActiveView, onSignIn, onRegister }: HeaderProps) {
+export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddItem }: HeaderProps) {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="container mx-auto px-4">
@@ -46,6 +47,17 @@ export function Header({ activeView, setActiveView, onSignIn, onRegister }: Head
             >
               <ClipboardList className="w-4 h-4" />
               Rental Tracker
+            </button>
+            <button
+              onClick={onAddItem}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                activeView === 'addItem'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+              Add Item
             </button>
           </nav>
 
