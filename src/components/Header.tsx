@@ -1,14 +1,15 @@
-import { Package, ClipboardList, Menu, Plus } from 'lucide-react';
+import { Package, ClipboardList, Menu, Plus, ShoppingBag, UserCircle } from 'lucide-react';
 
 interface HeaderProps {
-  activeView: 'catalog' | 'tracker' | 'addItem';
-  setActiveView: (view: 'catalog' | 'tracker' | 'addItem') => void;
+  activeView: 'catalog' | 'tracker' | 'addItem' | 'rentedItems';
+  setActiveView: (view: 'catalog' | 'tracker' | 'addItem' | 'rentedItems') => void;
   onSignIn?: () => void;
   onRegister?: () => void;
   onAddItem?: () => void;
+  onViewProfile?: () => void;
 }
 
-export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddItem }: HeaderProps) {
+export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddItem, onViewProfile }: HeaderProps) {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="container mx-auto px-4">
@@ -25,7 +26,7 @@ export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddI
           </div>
 
           {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-1">
             <button
               onClick={() => setActiveView('catalog')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -49,6 +50,17 @@ export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddI
               Rental Tracker
             </button>
             <button
+              onClick={() => setActiveView('rentedItems')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                activeView === 'rentedItems'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              My Rentals
+            </button>
+            <button
               onClick={onAddItem}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                 activeView === 'addItem'
@@ -63,6 +75,15 @@ export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddI
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
+            {/* TODO: Remove this button once auth flow is complete */}
+            <button
+              onClick={onViewProfile}
+              className="flex items-center gap-2 px-3 py-2 text-gray-500 hover:bg-gray-50 border border-dashed border-gray-300 rounded-lg transition-colors text-sm"
+              title="Temp: View User Profile"
+            >
+              <UserCircle className="w-4 h-4" />
+              My Profile
+            </button>
             <button
               onClick={onSignIn}
               className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
