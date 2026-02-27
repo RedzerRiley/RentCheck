@@ -4,9 +4,10 @@ interface HeaderProps {
   activeView: 'catalog' | 'tracker';
   setActiveView: (view: 'catalog' | 'tracker') => void;
   onSignIn?: () => void;
+  onRegister?: () => void;
 }
 
-export function Header({ activeView, setActiveView, onSignIn }: HeaderProps) {
+export function Header({ activeView, setActiveView, onSignIn, onRegister }: HeaderProps) {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="container mx-auto px-4">
@@ -56,7 +57,10 @@ export function Header({ activeView, setActiveView, onSignIn }: HeaderProps) {
             >
               Sign In
             </button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={onRegister}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Get Started
             </button>
           </div>
