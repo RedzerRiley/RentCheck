@@ -1,8 +1,8 @@
-import { Package, ClipboardList, Menu, Plus } from 'lucide-react';
+import { Package, ClipboardList, Menu, Plus, ShoppingBag } from 'lucide-react';
 
 interface HeaderProps {
-  activeView: 'catalog' | 'tracker' | 'addItem';
-  setActiveView: (view: 'catalog' | 'tracker' | 'addItem') => void;
+  activeView: 'catalog' | 'tracker' | 'addItem' | 'rentedItems';
+  setActiveView: (view: 'catalog' | 'tracker' | 'addItem' | 'rentedItems') => void;
   onSignIn?: () => void;
   onRegister?: () => void;
   onAddItem?: () => void;
@@ -25,7 +25,7 @@ export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddI
           </div>
 
           {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-1">
             <button
               onClick={() => setActiveView('catalog')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -47,6 +47,17 @@ export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddI
             >
               <ClipboardList className="w-4 h-4" />
               Rental Tracker
+            </button>
+            <button
+              onClick={() => setActiveView('rentedItems')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                activeView === 'rentedItems'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              My Rentals
             </button>
             <button
               onClick={onAddItem}
