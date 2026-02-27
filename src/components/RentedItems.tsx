@@ -20,75 +20,20 @@ interface RentedItem {
 }
 
 const mockRentedItems: RentedItem[] = [
-  {
-    id: 1,
-    name: "Professional Camera",
-    category: "Electronics",
-    price: "$50/day",
-    rentedDate: "Feb 20, 2026",
-    dueDate: "Feb 27, 2026",
-    status: "overdue",
-  },
-  {
-    id: 2,
-    name: "Power Drill Set",
-    category: "Tools",
-    price: "$25/day",
-    rentedDate: "Feb 22, 2026",
-    dueDate: "Mar 1, 2026",
-    status: "active",
-  },
-  {
-    id: 3,
-    name: "Camping Tent (4-person)",
-    category: "Outdoor",
-    price: "$35/day",
-    rentedDate: "Feb 10, 2026",
-    dueDate: "Feb 15, 2026",
-    status: "returned",
-  },
-  {
-    id: 4,
-    name: "Projector & Screen",
-    category: "Electronics",
-    price: "$45/day",
-    rentedDate: "Feb 24, 2026",
-    dueDate: "Mar 3, 2026",
-    status: "active",
-  },
-  {
-    id: 5,
-    name: "Party Sound System",
-    category: "Electronics",
-    price: "$75/day",
-    rentedDate: "Feb 5, 2026",
-    dueDate: "Feb 10, 2026",
-    status: "returned",
-  },
+  { id: 1, name: "Professional Camera", category: "Electronics", price: "$50/day", rentedDate: "Feb 20, 2026", dueDate: "Feb 27, 2026", status: "overdue" },
+  { id: 2, name: "Power Drill Set", category: "Tools", price: "$25/day", rentedDate: "Feb 22, 2026", dueDate: "Mar 1, 2026", status: "active" },
+  { id: 3, name: "Camping Tent (4-person)", category: "Outdoor", price: "$35/day", rentedDate: "Feb 10, 2026", dueDate: "Feb 15, 2026", status: "returned" },
+  { id: 4, name: "Projector & Screen", category: "Electronics", price: "$45/day", rentedDate: "Feb 24, 2026", dueDate: "Mar 3, 2026", status: "active" },
+  { id: 5, name: "Party Sound System", category: "Electronics", price: "$75/day", rentedDate: "Feb 5, 2026", dueDate: "Feb 10, 2026", status: "returned" },
 ];
 
 const STATUS_FILTERS = ["All", "Active", "Returned", "Overdue"] as const;
 type FilterType = (typeof STATUS_FILTERS)[number];
 
 const statusConfig = {
-  active: {
-    label: "Active",
-    icon: Clock,
-    badgeClass: "bg-blue-50 text-blue-600 border border-blue-200",
-    accent: "border-l-blue-500",
-  },
-  returned: {
-    label: "Returned",
-    icon: CheckCircle,
-    badgeClass: "bg-green-50 text-green-600 border border-green-200",
-    accent: "border-l-green-500",
-  },
-  overdue: {
-    label: "Overdue",
-    icon: AlertCircle,
-    badgeClass: "bg-red-50 text-red-600 border border-red-200",
-    accent: "border-l-red-500",
-  },
+  active:   { label: "Active",   Icon: Clock,         accentColor: "#3b82f6", badgeBg: "#eff6ff", badgeColor: "#2563eb", badgeBorder: "#bfdbfe" },
+  returned: { label: "Returned", Icon: CheckCircle,   accentColor: "#22c55e", badgeBg: "#f0fdf4", badgeColor: "#16a34a", badgeBorder: "#bbf7d0" },
+  overdue:  { label: "Overdue",  Icon: AlertCircle,   accentColor: "#ef4444", badgeBg: "#fef2f2", badgeColor: "#dc2626", badgeBorder: "#fecaca" },
 };
 
 export function RentedItems() {
@@ -101,198 +46,174 @@ export function RentedItems() {
   );
 
   const counts = {
-    All: items.length,
-    Active: items.filter((i) => i.status === "active").length,
+    All:      items.length,
+    Active:   items.filter((i) => i.status === "active").length,
     Returned: items.filter((i) => i.status === "returned").length,
-    Overdue: items.filter((i) => i.status === "overdue").length,
+    Overdue:  items.filter((i) => i.status === "overdue").length,
   };
 
   const handleReturn = async (id: number) => {
     setReturningId(id);
     await new Promise((r) => setTimeout(r, 700));
-
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: "returned" } : item
-      )
-    );
-
+    // TODO: await fetch(`http://localhost:3000/api/rentals/${id}/return`, { method: 'PATCH' });
+    setItems((prev) => prev.map((item) => item.id === id ? { ...item, status: "returned" as const } : item));
     setReturningId(null);
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">
-            My Rented Items
-          </h2>
-          <p className="text-gray-600 text-sm">
-            Track the status of your current and past rentals
-          </p>
-        </div>
+    <div style={{ width: "100%", fontFamily: "inherit" }}>
 
-        <div className="text-sm text-gray-500">
-          {counts.Active} active ·{" "}
-          {counts.Overdue > 0 && (
-            <span className="text-red-500 font-medium">
-              {counts.Overdue} overdue ·{" "}
-            </span>
-          )}
-          {counts.Returned} returned
+      {/* ── Page header ── */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>My Rented Items</h2>
+          <p style={{ fontSize: 14, color: "#6b7280", margin: "4px 0 0" }}>Track the status of your current and past rentals</p>
+        </div>
+        <div style={{ fontSize: 13, color: "#6b7280", paddingTop: 4 }}>
+          <span>{counts.Active} active</span>
+          {counts.Overdue > 0 && <span style={{ color: "#ef4444", fontWeight: 600 }}> · {counts.Overdue} overdue</span>}
+          <span> · {counts.Returned} returned</span>
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      {/* ── Summary cards ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
         {[
-          {
-            label: "Active Rentals",
-            count: counts.Active,
-            icon: Clock,
-            color: "text-blue-600",
-            bg: "bg-blue-50",
-          },
-          {
-            label: "Overdue",
-            count: counts.Overdue,
-            icon: AlertCircle,
-            color: "text-red-600",
-            bg: "bg-red-50",
-          },
-          {
-            label: "Returned",
-            count: counts.Returned,
-            icon: CheckCircle,
-            color: "text-green-600",
-            bg: "bg-green-50",
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4"
-          >
-            <div
-              className={`w-10 h-10 ${stat.bg} rounded-lg flex items-center justify-center`}
-            >
-              <stat.icon className={`w-5 h-5 ${stat.color}`} />
+          { label: "Active Rentals", count: counts.Active,   Icon: Clock,       color: "#2563eb", bg: "#eff6ff" },
+          { label: "Overdue",        count: counts.Overdue,  Icon: AlertCircle, color: "#dc2626", bg: "#fef2f2" },
+          { label: "Returned",       count: counts.Returned, Icon: CheckCircle, color: "#16a34a", bg: "#f0fdf4" },
+        ].map(({ label, count, Icon, color, bg }) => (
+          <div key={label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 44, height: 44, background: bg, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Icon style={{ width: 22, height: 22, color }} />
             </div>
-
             <div>
-              <div className={`text-2xl font-bold ${stat.color}`}>
-                {stat.count}
-              </div>
-              <div className="text-xs text-gray-500">{stat.label}</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color, lineHeight: 1 }}>{count}</div>
+              <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 3 }}>{label}</div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Filter Tabs */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-8">
-        <div className="flex flex-wrap gap-2">
-          {STATUS_FILTERS.map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-4 py-2 rounded-lg border text-sm font-medium transition ${
-                filter === f
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
-              }`}
-            >
-              {f}
-              <span
-                className={`ml-2 px-1.5 py-0.5 text-xs rounded ${
-                  filter === f
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-100 text-gray-500"
-                }`}
+      {/* ── Filter tabs ── */}
+      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "14px 16px", marginBottom: 24 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {STATUS_FILTERS.map((f) => {
+            const active = filter === f;
+            return (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  border: active ? "1px solid #2563eb" : "1px solid #e5e7eb",
+                  background: active ? "#2563eb" : "#fff",
+                  color: active ? "#fff" : "#374151",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  transition: "all 0.15s",
+                }}
               >
-                {counts[f]}
-              </span>
-            </button>
-          ))}
+                {f}
+                <span style={{
+                  padding: "1px 7px",
+                  borderRadius: 20,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  background: active ? "rgba(255,255,255,0.25)" : "#f3f4f6",
+                  color: active ? "#fff" : "#6b7280",
+                }}>
+                  {counts[f]}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Items */}
+      {/* ── Items list ── */}
       {filtered.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-xl p-16 text-center">
-          <Package className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-gray-700 font-medium">No items found</h3>
-          <p className="text-gray-400 text-sm">
-            No rentals match the selected filter.
-          </p>
+        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "64px 24px", textAlign: "center" }}>
+          <Package style={{ width: 40, height: 40, color: "#d1d5db", margin: "0 auto 12px" }} />
+          <p style={{ fontWeight: 600, color: "#374151", margin: "0 0 4px" }}>No items found</p>
+          <p style={{ fontSize: 13, color: "#9ca3af", margin: 0 }}>No rentals match the selected filter.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {filtered.map((item) => {
             const cfg = statusConfig[item.status];
-            const StatusIcon = cfg.icon;
             const isReturning = returningId === item.id;
 
             return (
               <div
                 key={item.id}
-                className={`bg-white border border-gray-200 border-l-4 ${cfg.accent}
-                rounded-xl p-4 flex flex-col sm:flex-row gap-4 sm:items-center
-                hover:shadow-sm transition`}
+                style={{
+                  background: "#fff",
+                  border: "1px solid #e5e7eb",
+                  borderLeft: `4px solid ${cfg.accentColor}`,
+                  borderRadius: 12,
+                  padding: "18px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 16,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                  transition: "box-shadow 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)")}
+                onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)")}
               >
-                {/* Image */}
-                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Package className="w-7 h-7 text-gray-300" />
+                {/* Icon */}
+                <div style={{
+                  width: 52, height: 52,
+                  background: cfg.badgeBg,
+                  borderRadius: 10,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  flexShrink: 0,
+                }}>
+                  <Package style={{ width: 24, height: 24, color: cfg.accentColor }} />
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-gray-900 truncate">
-                        {item.name}
-                      </h3>
-
-                      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mt-1">
-                        <Tag className="w-3.5 h-3.5" />
-                        {item.category}
-                        <span className="text-gray-300">·</span>
-                        <span className="text-blue-600 font-medium">
-                          {item.price}
-                        </span>
-                      </div>
-                    </div>
-
-                    <span
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${cfg.badgeClass}`}
-                    >
-                      <StatusIcon className="w-3 h-3" />
+                {/* Main content */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Top row: name + badge */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {item.name}
+                    </h3>
+                    <span style={{
+                      display: "flex", alignItems: "center", gap: 5,
+                      padding: "4px 10px", borderRadius: 20,
+                      fontSize: 11, fontWeight: 600, flexShrink: 0,
+                      background: cfg.badgeBg, color: cfg.badgeColor,
+                      border: `1px solid ${cfg.badgeBorder}`,
+                    }}>
+                      <cfg.Icon style={{ width: 11, height: 11 }} />
                       {cfg.label}
                     </span>
                   </div>
 
-                  {/* Dates */}
-                  <div className="flex flex-wrap gap-4 mt-3 text-xs text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      Rented:
-                      <span className="text-gray-600 ml-1">
-                        {item.rentedDate}
-                      </span>
-                    </span>
+                  {/* Category + price */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#6b7280", marginBottom: 10 }}>
+                    <Tag style={{ width: 13, height: 13 }} />
+                    <span>{item.category}</span>
+                    <span style={{ color: "#d1d5db" }}>·</span>
+                    <span style={{ color: "#2563eb", fontWeight: 600 }}>{item.price}</span>
+                  </div>
 
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      Due:
-                      <span
-                        className={`ml-1 font-medium ${
-                          item.status === "overdue"
-                            ? "text-red-500"
-                            : "text-gray-600"
-                        }`}
-                      >
-                        {item.dueDate}
-                      </span>
+                  {/* Dates */}
+                  <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#9ca3af" }}>
+                      <Calendar style={{ width: 12, height: 12 }} />
+                      Rented: <span style={{ color: "#4b5563", fontWeight: 500, marginLeft: 3 }}>{item.rentedDate}</span>
+                    </span>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "#9ca3af" }}>
+                      <Calendar style={{ width: 12, height: 12 }} />
+                      Due: <span style={{ color: item.status === "overdue" ? "#ef4444" : "#4b5563", fontWeight: 500, marginLeft: 3 }}>{item.dueDate}</span>
                     </span>
                   </div>
                 </div>
@@ -302,19 +223,34 @@ export function RentedItems() {
                   <button
                     onClick={() => handleReturn(item.id)}
                     disabled={isReturning}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium text-white transition
-                      ${
-                        item.status === "overdue"
-                          ? "bg-red-600 hover:bg-red-700"
-                          : "bg-blue-600 hover:bg-blue-700"
-                      }
-                      disabled:opacity-60`}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      padding: "9px 18px",
+                      background: isReturning ? "#93c5fd" : item.status === "overdue" ? "#ef4444" : "#2563eb",
+                      color: "#fff", border: "none", borderRadius: 8,
+                      fontSize: 13, fontWeight: 600, cursor: isReturning ? "not-allowed" : "pointer",
+                      flexShrink: 0, transition: "background 0.15s",
+                      minWidth: 90,
+                    }}
                   >
-                    {isReturning ? "Returning..." : "Return"}
+                    {isReturning ? (
+                      <>
+                        <svg style={{ width: 13, height: 13, animation: "spin 1s linear infinite" }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        Returning...
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw style={{ width: 13, height: 13 }} />
+                        Return
+                      </>
+                    )}
                   </button>
                 ) : (
-                  <div className="flex items-center gap-1 text-green-600 font-medium text-sm">
-                    <CheckCircle className="w-4 h-4" />
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#16a34a", fontWeight: 600, flexShrink: 0, minWidth: 90, justifyContent: "center" }}>
+                    <CheckCircle style={{ width: 15, height: 15 }} />
                     Returned
                   </div>
                 )}
@@ -323,6 +259,8 @@ export function RentedItems() {
           })}
         </div>
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
