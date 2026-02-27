@@ -123,5 +123,8 @@ git commit -m "Your message, short but detailed"
 git push -u origin feature-branch
 
 ```
+# Remember when you're in a branch your working on please do these commands to always be up to date with main
 
-# Then it will be reviewed and pushed into main
+``` bash
+git pull --rebase origin main
+```
