@@ -1,4 +1,27 @@
+# Editor
 .vscode
+
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# Dependencies
 node_modules
+
+# Build output
 dist
+
+# Firebase
+.firebase
+.firebaserc.local
+firebase-debug.log
+firestore-debug.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
