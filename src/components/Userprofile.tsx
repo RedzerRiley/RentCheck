@@ -1,481 +1,359 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  User, MapPin, Hash, Upload, X, Shield, CheckCircle,
-  Clock, ChevronRight, Phone, Mail, FileText, AlertCircle
+  User, MapPin, Lock, LogOut,
+  ArrowLeft, CheckCircle, Save,
+  Eye, EyeOff, AlertCircle, Camera
 } from 'lucide-react';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { db, auth } from '../firebase/firebase';
+
+type UserRole = 'user' | 'staff' | 'admin';
 
 interface UserProfileProps {
+  userName: string;
+  userEmail: string;
+  userId: string;
+  role?: UserRole;
+  onLogout?: () => void;
   onBack?: () => void;
-  userEmail?: string;
 }
 
-export function UserProfile({ onBack, userEmail = 'user@rentcheck.com' }: UserProfileProps) {
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
-  const [city, setCity] = useState('');
-  const [zipCode, setZipCode] = useState('');
-  const [idType, setIdType] = useState('');
-  const [idNumber, setIdNumber] = useState('');
-  const [idFile, setIdFile] = useState<File | null>(null);
-  const [idPreview, setIdPreview] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [error, setError] = useState('');
-  const fileRef = useRef<HTMLInputElement>(null);
+export function UserProfile({ userName, userEmail, userId, role = 'user', onLogout, onBack }: UserProfileProps) {
+  const [activeTab, setActiveTab] = useState<'details' | 'password'>('details');
+  const [isVerified, setIsVerified] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: userName || '',
+    email: userEmail || '',
+    phone: '',
+    street: '',
+    city: '',
+    zip: '',
+  });
 
-  const ID_TYPES = ["Driver's License", "Passport", "National ID", "SSS ID", "PhilHealth ID", "Voter's ID"];
+  const [profilePic, setProfilePic] = useState<string | null>(null);
+  const profilePicRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
+  const [showPw, setShowPw] = useState({ current: false, new: false, confirm: false });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [pwError, setPwError] = useState('');
+
+  useEffect(() => {
+    if (!userId) return;
+    const unsub = onSnapshot(doc(db, 'users', userId), (snap) => {
+      if (snap.exists()) {
+        const d = snap.data();
+        setIsVerified(d.verified ?? false);
+        if (d.profilePic) setProfilePic(d.profilePic);
+        setFormData({
+          fullName: d.displayName || userName || '',
+          email: d.email || userEmail || '',
+          phone: d.phone || '',
+          street: d.street || '',
+          city: d.city || '',
+          zip: d.zip || '',
+        });
+      }
+    });
+    return () => unsub();
+  }, [userId]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleProfilePicChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIdFile(file);
+    if (file.size > 800 * 1024) {
+      alert('Please choose an image under 800KB for profile pictures.');
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = () => setIdPreview(reader.result as string);
+    reader.onloadend = () => setProfilePic(reader.result as string);
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError('');
+    setSaveSuccess(false);
+    try {
+      await updateDoc(doc(db, 'users', userId), {
+        displayName: formData.fullName,
+        phone: formData.phone,
+        street: formData.street,
+        city: formData.city,
+        zip: formData.zip,
+        ...(profilePic ? { profilePic } : {}),
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch {
+      setSaveError('Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    if (!fullName.trim()) { setError('Full name is required.'); return; }
-    if (!phone.trim()) { setError('Phone number is required.'); return; }
-    if (!address.trim()) { setError('Address is required.'); return; }
-    if (!city.trim()) { setError('City is required.'); return; }
-    if (!zipCode.trim()) { setError('Zip code is required.'); return; }
-    if (!idType) { setError('Please select an ID type.'); return; }
-    if (!idNumber.trim()) { setError('ID number is required.'); return; }
-    if (!idFile) { setError('Please upload a photo of your valid ID.'); return; }
-
-    setIsSubmitting(true);
-
-    // TODO: Replace with real API call:
-    // const formData = new FormData();
-    // formData.append('fullName', fullName);
-    // formData.append('phone', phone);
-    // formData.append('address', address);
-    // formData.append('city', city);
-    // formData.append('zipCode', zipCode);
-    // formData.append('idType', idType);
-    // formData.append('idNumber', idNumber);
-    // formData.append('idFile', idFile);
-    // const res = await fetch('http://localhost:3000/api/users/verify', {
-    //   method: 'POST',
-    //   body: formData,
-    // });
-    // if (!res.ok) { setError('Submission failed. Please try again.'); setIsSubmitting(false); return; }
-
-    await new Promise((r) => setTimeout(r, 1000));
-    setIsSubmitting(false);
-    setShowConfirmation(true);
+  const handlePasswordUpdate = async () => {
+    setPwError('');
+    setPwSuccess(false);
+    if (!passwords.new || !passwords.current) { setPwError('Please fill in all fields.'); return; }
+    if (passwords.new !== passwords.confirm) { setPwError('New passwords do not match.'); return; }
+    if (passwords.new.length < 8) { setPwError('Password must be at least 8 characters.'); return; }
+    setPwSaving(true);
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) throw new Error('No user');
+      const credential = EmailAuthProvider.credential(user.email, passwords.current);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, passwords.new);
+      setPwSuccess(true);
+      setPasswords({ current: '', new: '', confirm: '' });
+      setTimeout(() => setPwSuccess(false), 3000);
+    } catch (err: any) {
+      const code = err?.code;
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') setPwError('Current password is incorrect.');
+      else if (code === 'auth/too-many-requests') setPwError('Too many attempts. Try again later.');
+      else setPwError('Failed to update password. Please try again.');
+    } finally {
+      setPwSaving(false);
+    }
   };
 
   const inputStyle: React.CSSProperties = {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: '11px 14px',
-    border: '1px solid #e5e7eb',
-    borderRadius: 8,
-    fontSize: 14,
-    color: '#111827',
-    background: '#fff',
-    outline: 'none',
-    fontFamily: 'inherit',
+    width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+    border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px',
+    marginTop: '6px', outline: 'none', color: '#111827', background: '#ffffff',
+    transition: 'border-color 0.2s',
   };
-
   const labelStyle: React.CSSProperties = {
-    display: 'block',
-    fontSize: 12,
-    fontWeight: 600,
-    color: '#374151',
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.04em',
-    marginBottom: 6,
+    fontSize: '12px', fontWeight: 600, color: '#374151',
+    textTransform: 'uppercase', letterSpacing: '0.025em',
   };
 
-  const sectionStyle: React.CSSProperties = {
-    background: '#fff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 12,
-    padding: '1.5rem',
-    marginBottom: 20,
+  const roleBadge: Record<UserRole, { label: string; bg: string; color: string; border: string }> = {
+    admin: { label: 'Admin', bg: '#fef3c7', color: '#92400e', border: '#f59e0b' },
+    staff: { label: 'Staff', bg: '#eff6ff', color: '#1e40af', border: '#3b82f6' },
+    user:  { label: 'User',  bg: '#f0fdf4', color: '#166534', border: '#4ade80' },
   };
+  const badge = roleBadge[role];
 
-  const sectionHeaderStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
-    paddingBottom: 14,
-    borderBottom: '1px solid #f3f4f6',
-  };
-
-  // ── Confirmation popup ──────────────────────────────────────────────────────
-  if (showConfirmation) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-        <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
-          @keyframes pulse-ring { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
-        `}</style>
-        <div style={{ background: '#fff', borderRadius: 16, padding: '2.5rem', maxWidth: 440, width: '100%', textAlign: 'center', boxShadow: '0 8px 40px rgba(0,0,0,0.1)' }}>
-
-          {/* Pending icon */}
-          <div style={{ width: 80, height: 80, background: '#eff6ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', position: 'relative' }}>
-            <Clock style={{ width: 36, height: 36, color: '#2563eb' }} />
-            <div style={{ position: 'absolute', inset: -3, borderRadius: '50%', border: '3px solid transparent', borderTopColor: '#2563eb', animation: 'spin 1.5s linear infinite' }} />
-          </div>
-
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#111827', marginBottom: 8 }}>
-            Verification Submitted!
-          </h2>
-          <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.7, marginBottom: 24 }}>
-            Your information and ID have been submitted. Please wait while an admin reviews and approves your verification request.
-          </p>
-
-          {/* Summary */}
-          <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '1rem 1.25rem', marginBottom: 20, textAlign: 'left' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', animation: 'pulse-ring 2s ease-in-out infinite' }} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#92400e' }}>Pending Admin Review</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {[
-                { label: 'Name', value: fullName },
-                { label: 'ID Type', value: idType },
-                { label: 'ID Number', value: `••••${idNumber.slice(-4)}` },
-                { label: 'Address', value: `${city}, ${zipCode}` },
-              ].map(({ label, value }) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                  <span style={{ color: '#9ca3af' }}>{label}</span>
-                  <span style={{ color: '#111827', fontWeight: 500 }}>{value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Notice */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 12px', marginBottom: 28, textAlign: 'left' }}>
-            <AlertCircle style={{ width: 14, height: 14, color: '#d97706', marginTop: 2, flexShrink: 0 }} />
-            <p style={{ fontSize: 12, color: '#92400e', lineHeight: 1.6, margin: 0 }}>
-              Verification typically takes <strong>1–3 business days</strong>. You'll be notified once your account is approved and you can start renting items.
-            </p>
-          </div>
-
-          <button
-            onClick={onBack}
-            style={{ width: '100%', padding: '12px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-          >
-            Back to Home
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Main form ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb', fontFamily: 'inherit' }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f9fafb', fontFamily: 'sans-serif' }}>
 
-      {/* Top bar */}
-      <div style={{ background: '#fff', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 1.5rem', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, background: '#2563eb', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontWeight: 800, fontSize: 13, color: '#fff', letterSpacing: '0.05em' }}>RC</span>
-            </div>
-            <span style={{ fontWeight: 700, fontSize: 16, color: '#111827', letterSpacing: '0.08em' }}>RENTCHECK</span>
+      {/* Sidebar */}
+      <div style={{ width: 280, background: '#fff', borderRight: '1px solid #e5e7eb', padding: '2rem 1rem', display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
+        
+        {/* Logo + user card */}
+        <div style={{ marginBottom: 32, padding: '0 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 36, height: 36, background: '#2563eb', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 13 }}>RC</div>
+            <span style={{ fontWeight: 700, fontSize: 18, color: '#111827' }}>RENTCHECK</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 20, padding: '4px 10px' }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }} />
-            <span style={{ fontSize: 11, color: '#92400e', fontWeight: 600 }}>Unverified</span>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '2.5rem 1.5rem' }}>
-
-        {/* Page header */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 24 }}>
-            <AlertCircle style={{ width: 18, height: 18, color: '#d97706', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#92400e' }}>Account verification required</div>
-              <div style={{ fontSize: 12, color: '#b45309', marginTop: 2 }}>
-                You must verify your identity before you can rent items. Please fill out all required fields below.
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#e2e8f0', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {profilePic
+                    ? <img src={profilePic} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <User style={{ width: 22, height: 22, color: '#94a3b8' }} />}
+                </div>
+                <button onClick={() => profilePicRef.current?.click()}
+                  style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: '50%', background: '#2563eb', border: '2px solid #fff', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                  <Camera style={{ width: 10, height: 10 }} />
+                </button>
+                <input type="file" ref={profilePicRef} onChange={handleProfilePicChange} style={{ display: 'none' }} accept="image/*" />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {formData.fullName || userName}
+                </div>
+                <div style={{ fontSize: 11, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {formData.email}
+                </div>
               </div>
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', background: badge.bg, border: `1px solid ${badge.border}`, borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: badge.color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {badge.label}
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: isVerified ? '#ecfdf5' : '#fff7ed', border: `1px solid ${isVerified ? '#10b981' : '#f97316'}`, borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 600, color: isVerified ? '#065f46' : '#9a3412' }}>
+                {isVerified ? '✓ Verified' : '⏳ Unverified'}
+              </span>
+            </div>
           </div>
-          <h1 style={{ fontSize: 26, fontWeight: 700, color: '#111827', marginBottom: 4 }}>Complete Your Profile</h1>
-          <p style={{ color: '#6b7280', fontSize: 15, margin: 0 }}>
-            Logged in as <span style={{ color: '#2563eb', fontWeight: 500 }}>{userEmail}</span>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1 }}>
+          {onBack && (
+            <button onClick={onBack}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px', border: 'none', background: 'transparent', color: '#6b7280', borderRadius: '8px', cursor: 'pointer', marginBottom: '12px', fontWeight: 500, fontSize: 14 }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f9fafb'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+              <ArrowLeft style={{ width: 18, height: 18 }} /> Back to Dashboard
+            </button>
+          )}
+          <div style={{ height: 1, background: '#f3f4f6', marginBottom: 12 }} />
+          {[
+            { id: 'details', label: 'Account Details', icon: User },
+            { id: 'password', label: 'Change Password', icon: Lock },
+          ].map((item) => (
+            <button key={item.id} onClick={() => setActiveTab(item.id as any)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px', border: 'none', background: activeTab === item.id ? '#eff6ff' : 'transparent', color: activeTab === item.id ? '#2563eb' : '#4b5563', borderRadius: '8px', cursor: 'pointer', marginBottom: '4px', fontWeight: activeTab === item.id ? 600 : 500, fontSize: 14 }}>
+              <item.icon style={{ width: 18, height: 18 }} />
+              {item.label}
+            </button>
+          ))}
+          <button onClick={onLogout}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px', border: 'none', background: 'transparent', color: '#ef4444', borderRadius: '8px', cursor: 'pointer', marginBottom: '4px', fontWeight: 500, fontSize: 14 }}>
+            <LogOut style={{ width: 18, height: 18 }} /> Logout
+          </button>
+        </nav>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, padding: '3rem', maxWidth: 900, margin: '0 auto' }}>
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: '#111827', margin: 0 }}>
+            {activeTab === 'details' ? 'My Profile' : 'Security Settings'}
+          </h1>
+          <p style={{ color: '#6b7280', marginTop: 8 }}>
+            {activeTab === 'details' ? `Welcome back, ${formData.fullName || userName}` : 'Update your password below.'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        {activeTab === 'details' ? (
+          <div style={{ display: 'grid', gap: 24 }}>
 
-          {/* ── Personal Information ── */}
-          <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
-              <div style={{ width: 32, height: 32, background: '#eff6ff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <User style={{ width: 16, height: 16, color: '#2563eb' }} />
+            {/* Personal Info */}
+            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                <User style={{ color: '#2563eb', width: 20 }} />
+                <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Personal Information</h2>
               </div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>Personal Information</div>
-                <div style={{ fontSize: 12, color: '#9ca3af' }}>Your basic contact details</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
-                <div style={{ position: 'relative' }}>
-                  <User style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: '#9ca3af', pointerEvents: 'none' }} />
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Juan Dela Cruz"
-                    required
-                    style={{ ...inputStyle, paddingLeft: 36 }}
-                    onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)'; }}
-                    onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-                  />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div>
+                  <label style={labelStyle}>Full Name</label>
+                  <input name="fullName" style={inputStyle} value={formData.fullName} onChange={handleInputChange} placeholder="Enter your full name"
+                    onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
                 </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Phone Number <span style={{ color: '#ef4444' }}>*</span></label>
-                <div style={{ position: 'relative' }}>
-                  <Phone style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: '#9ca3af', pointerEvents: 'none' }} />
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+63 912 345 6789"
-                    required
-                    style={{ ...inputStyle, paddingLeft: 36 }}
-                    onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)'; }}
-                    onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-                  />
+                <div>
+                  <label style={labelStyle}>Email Address</label>
+                  <input style={{ ...inputStyle, background: '#f9fafb', color: '#9ca3af' }} value={formData.email} readOnly />
                 </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Email Address</label>
-                <div style={{ position: 'relative' }}>
-                  <Mail style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: '#9ca3af', pointerEvents: 'none' }} />
-                  <input
-                    type="email"
-                    value={userEmail}
-                    readOnly
-                    style={{ ...inputStyle, paddingLeft: 36, background: '#f9fafb', color: '#9ca3af', cursor: 'not-allowed' }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Address ── */}
-          <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
-              <div style={{ width: 32, height: 32, background: '#eff6ff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <MapPin style={{ width: 16, height: 16, color: '#2563eb' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>Address</div>
-                <div style={{ fontSize: 12, color: '#9ca3af' }}>Your current residential address</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Street Address <span style={{ color: '#ef4444' }}>*</span></label>
-                <div style={{ position: 'relative' }}>
-                  <MapPin style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: '#9ca3af', pointerEvents: 'none' }} />
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="123 Rizal Street, Barangay San Juan"
-                    required
-                    style={{ ...inputStyle, paddingLeft: 36 }}
-                    onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)'; }}
-                    onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>City / Municipality <span style={{ color: '#ef4444' }}>*</span></label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Quezon City"
-                  required
-                  style={inputStyle}
-                  onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)'; }}
-                  onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Zip Code <span style={{ color: '#ef4444' }}>*</span></label>
-                <div style={{ position: 'relative' }}>
-                  <Hash style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: '#9ca3af', pointerEvents: 'none' }} />
-                  <input
-                    type="text"
-                    value={zipCode}
-                    onChange={(e) => setZipCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    placeholder="1100"
-                    required
-                    style={{ ...inputStyle, paddingLeft: 36 }}
-                    onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)'; }}
-                    onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Valid ID ── */}
-          <div style={sectionStyle}>
-            <div style={sectionHeaderStyle}>
-              <div style={{ width: 32, height: 32, background: '#eff6ff', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Shield style={{ width: 16, height: 16, color: '#2563eb' }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>Valid Government ID</div>
-                <div style={{ fontSize: 12, color: '#9ca3af' }}>Required for identity verification</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
-              <div>
-                <label style={labelStyle}>ID Type <span style={{ color: '#ef4444' }}>*</span></label>
-                <select
-                  value={idType}
-                  onChange={(e) => setIdType(e.target.value)}
-                  required
-                  style={inputStyle}
-                  onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)'; }}
-                  onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-                >
-                  <option value="">Select ID type...</option>
-                  {ID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle}>ID Number <span style={{ color: '#ef4444' }}>*</span></label>
-                <div style={{ position: 'relative' }}>
-                  <FileText style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 15, height: 15, color: '#9ca3af', pointerEvents: 'none' }} />
-                  <input
-                    type="text"
-                    value={idNumber}
-                    onChange={(e) => setIdNumber(e.target.value)}
-                    placeholder="Enter ID number"
-                    required
-                    style={{ ...inputStyle, paddingLeft: 36 }}
-                    onFocus={(e) => { e.target.style.borderColor = '#3b82f6'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.12)'; }}
-                    onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-                  />
+                <div>
+                  <label style={labelStyle}>Phone Number</label>
+                  <input name="phone" style={inputStyle} value={formData.phone} onChange={handleInputChange} placeholder="+63 000 000 0000"
+                    onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
                 </div>
               </div>
             </div>
 
-            {/* Upload */}
-            <div>
-              <label style={labelStyle}>Upload ID Photo <span style={{ color: '#ef4444' }}>*</span></label>
-              {idPreview ? (
-                <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-                  <img src={idPreview} alt="ID preview" style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
-                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.45) 0%, transparent 55%)' }} />
-                  <div style={{ position: 'absolute', bottom: 10, left: 12, color: '#fff', fontSize: 12, fontWeight: 500 }}>{idFile?.name}</div>
-                  <button type="button" onClick={() => { setIdFile(null); setIdPreview(null); if (fileRef.current) fileRef.current.value = ''; }}
-                    style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, background: 'rgba(0,0,0,0.55)', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                    <X style={{ width: 14, height: 14 }} />
-                  </button>
-                  <button type="button" onClick={() => fileRef.current?.click()}
-                    style={{ position: 'absolute', bottom: 10, right: 10, padding: '5px 10px', background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', color: '#374151' }}>
-                    Change
-                  </button>
+            {/* Address */}
+            <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                <MapPin style={{ color: '#2563eb', width: 20 }} />
+                <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Current Address</h2>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>Street Address</label>
+                <input name="street" style={inputStyle} value={formData.street} onChange={handleInputChange} placeholder="House No., Street, Subdivision"
+                  onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+                <div>
+                  <label style={labelStyle}>City / Municipality</label>
+                  <input name="city" style={inputStyle} value={formData.city} onChange={handleInputChange} placeholder="e.g. Quezon City"
+                    onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
                 </div>
-              ) : (
-                <button type="button" onClick={() => fileRef.current?.click()}
-                  style={{ width: '100%', height: 140, background: '#f9fafb', border: '2px dashed #d1d5db', borderRadius: 10, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#9ca3af', boxSizing: 'border-box' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#93c5fd')}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#d1d5db')}
-                >
-                  <Upload style={{ width: 22, height: 22 }} />
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Click to upload your ID</div>
-                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>PNG, JPG up to 10MB · Front side only</div>
-                  </div>
-                </button>
-              )}
-              <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-            </div>
-
-            {/* Privacy note */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 12px', marginTop: 14 }}>
-              <CheckCircle style={{ width: 14, height: 14, color: '#16a34a', marginTop: 2, flexShrink: 0 }} />
-              <p style={{ fontSize: 12, color: '#166534', margin: 0, lineHeight: 1.6 }}>
-                Your ID is encrypted and securely stored. It is only used for identity verification and will never be shared with third parties.
-              </p>
-            </div>
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <AlertCircle style={{ width: 14, height: 14, color: '#dc2626', flexShrink: 0 }} />
-              <p style={{ fontSize: 13, color: '#dc2626', margin: 0 }}>{error}</p>
-            </div>
-          )}
-
-          {/* Submit footer */}
-          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>Ready to verify?</div>
-              <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
-                Fields marked <span style={{ color: '#ef4444' }}>*</span> are required
+                <div>
+                  <label style={labelStyle}>Zip Code</label>
+                  <input name="zip" style={inputStyle} value={formData.zip} onChange={handleInputChange} placeholder="1100"
+                    onFocus={e => (e.target.style.borderColor = '#3b82f6')} onBlur={e => (e.target.style.borderColor = '#e5e7eb')} />
+                </div>
               </div>
             </div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '12px 28px',
-                background: isSubmitting ? '#93c5fd' : '#2563eb',
-                color: '#fff', border: 'none', borderRadius: 8,
-                fontSize: 14, fontWeight: 600,
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                flexShrink: 0,
-              }}
-            >
-              {isSubmitting ? (
-                <>
-                  <svg style={{ width: 15, height: 15, animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                  </svg>
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <Shield style={{ width: 15, height: 15 }} />
-                  Verify
-                  <ChevronRight style={{ width: 15, height: 15 }} />
-                </>
-              )}
+
+            {saveError && (
+              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertCircle style={{ width: 16, height: 16, color: '#dc2626' }} />
+                <span style={{ fontSize: 13, color: '#dc2626' }}>{saveError}</span>
+              </div>
+            )}
+            {saveSuccess && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CheckCircle style={{ width: 16, height: 16, color: '#16a34a' }} />
+                <span style={{ fontSize: 13, color: '#15803d', fontWeight: 500 }}>Profile saved successfully!</span>
+              </div>
+            )}
+
+            <button onClick={handleSave} disabled={saving}
+              style={{ background: saving ? '#93c5fd' : '#2563eb', color: '#fff', padding: '14px', borderRadius: 8, fontWeight: 600, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              {saving ? 'Saving...' : <><Save style={{ width: 16, height: 16 }} /> Save Profile</>}
             </button>
           </div>
-        </form>
+
+        ) : (
+          /* Password tab */
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <Lock style={{ color: '#2563eb', width: 20 }} />
+              <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Change Password</h2>
+            </div>
+            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>
+              Only works for email/password accounts, not Google sign-in.
+            </p>
+            <div style={{ display: 'grid', gap: 20 }}>
+              {(['current', 'new', 'confirm'] as const).map((field) => {
+                const labels = { current: 'Current Password', new: 'New Password', confirm: 'Confirm New Password' };
+                return (
+                  <div key={field}>
+                    <label style={labelStyle}>{labels[field]}</label>
+                    <div style={{ position: 'relative', marginTop: 6 }}>
+                      <input
+                        type={showPw[field] ? 'text' : 'password'}
+                        value={passwords[field]}
+                        onChange={e => setPasswords(prev => ({ ...prev, [field]: e.target.value }))}
+                        style={{ ...inputStyle, marginTop: 0, paddingRight: 44 }}
+                        placeholder="••••••••"
+                        onFocus={e => (e.target.style.borderColor = '#3b82f6')}
+                        onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
+                      />
+                      <button type="button" onClick={() => setShowPw(prev => ({ ...prev, [field]: !prev[field] }))}
+                        style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 0, display: 'flex' }}>
+                        {showPw[field] ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {pwError && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 16px', display: 'flex', gap: 8 }}>
+                  <AlertCircle style={{ width: 16, height: 16, color: '#dc2626', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: '#dc2626' }}>{pwError}</span>
+                </div>
+              )}
+              {pwSuccess && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '12px 16px', display: 'flex', gap: 8 }}>
+                  <CheckCircle style={{ width: 16, height: 16, color: '#16a34a' }} />
+                  <span style={{ fontSize: 13, color: '#15803d', fontWeight: 500 }}>Password updated successfully!</span>
+                </div>
+              )}
+              <button onClick={handlePasswordUpdate} disabled={pwSaving}
+                style={{ background: pwSaving ? '#93c5fd' : '#2563eb', color: '#fff', padding: '13px', borderRadius: 8, fontWeight: 600, border: 'none', cursor: pwSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {pwSaving ? 'Updating...' : <><Lock style={{ width: 16, height: 16 }} /> Update Password</>}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

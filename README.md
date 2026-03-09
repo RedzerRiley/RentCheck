@@ -148,4 +148,14 @@ RentCheck/
 ├─ .env          ← move it here!
 
 ```
+
+Then do:
+``` bash
+npm run dev
+``` 
+Restart the build if you already ran it.
+``` bash
+r + enter
+```
+
 # !!! DO NOT SHARE .ENV FILE OR PUSH .ENV FILE INTO THE REPO IT CONTAINS OUR API KEY !!!!
