@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Package, ClipboardList, Menu, Plus, ShoppingBag, LogOut, UserCircle, ChevronDown, ShieldCheck, Users } from 'lucide-react';
+import { Package, ClipboardList, Menu, Plus, ShoppingBag, LogOut, UserCircle, ChevronDown, Users } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { UserRole } from '../hooks/useUserRole';
 
@@ -37,12 +37,11 @@ export function AppHeader({ activeView, setActiveView, onAddItem, onSignOut, onV
 
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}>
-              <Users className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <Package className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="font-bold text-xl text-gray-900">Users Dashboard</div>
-              <div className="text-xs text-gray-500">Manage & Verify Users</div>
+              <div className="font-bold text-xl text-gray-900">RENTCHECK</div>
             </div>
           </div>
 
