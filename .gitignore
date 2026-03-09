@@ -9,6 +9,9 @@
 # Dependencies
 node_modules
 
+# Vite / React build folder
+build/
+
 # Build output
 dist
 
