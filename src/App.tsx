@@ -14,7 +14,7 @@ import { Footer } from './components/Footer';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { AddItem } from './components/AddItem';
-import { UserProfile } from './components/Userprofile';
+import { UserProfile } from './components/UserProfile';
 import { VerifyUsers } from './components/VerifyUsers';
 import { ProfileSetup } from './components/ProfileSetup';
 
