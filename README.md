@@ -128,3 +128,24 @@ git push -u origin feature-branch
 ``` bash
 git pull --rebase origin main
 ```
+
+# How to run database
+
+In the IDE terminal run:
+
+``` bash
+npm install firebase
+
+```
+Put the .env file within RentCheck directory 
+``` bash
+RentCheck/
+├─ node_modules/
+├─ public/
+├─ src/
+├─ package.json
+├─ vite.config.ts
+├─ .env          ← move it here!
+
+```
+# !!! DO NOT SHARE .ENV FILE OR PUSH .ENV FILE INTO THE REPO IT CONTAINS OUR API KEY !!!!

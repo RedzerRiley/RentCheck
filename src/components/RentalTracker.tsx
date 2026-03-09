@@ -44,7 +44,7 @@ export function RentalTracker() {
     <div>
       {/* Section Header */}
       <div className="mb-6">
-        <h2 className="text-2xl text-gray-900 mb-1">Rental Tracker</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-1">Rental Tracker</h2>
         <p className="text-gray-600">Monitor active rentals and returns</p>
       </div>
 

@@ -1,13 +1,14 @@
 import { useState } from 'react';
+import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
+import { auth, googleProvider } from '../firebase/firebase';
 import { Package, Eye, EyeOff, Lock, Mail, ArrowRight, User, Phone, ArrowLeft } from 'lucide-react';
 
 interface RegisterProps {
-  onRegister?: (data: { name: string; email: string; password: string }) => void;
   onBack?: () => void;
   onLoginClick?: () => void;
 }
 
-export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
+export function Register({ onBack, onLoginClick }: RegisterProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -16,8 +17,8 @@ export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,19 +34,40 @@ export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
     }
 
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 900));
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Save the display name to Firebase profile
+      await updateProfile(userCredential.user, { displayName: name });
+      // onAuthStateChanged in App.tsx will handle the redirect
+    } catch (err: any) {
+      const code = err?.code;
+      if (code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists.');
+      } else if (code === 'auth/invalid-email') {
+        setError('Please enter a valid email address.');
+      } else if (code === 'auth/weak-password') {
+        setError('Password is too weak. Please choose a stronger one.');
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    // TODO: Replace with real API call:
-    // const res = await fetch('http://localhost:3000/api/register', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ name, email, phone, password }),
-    // });
-    // if (!res.ok) { setError(await res.text()); setIsLoading(false); return; }
-
-    setIsLoading(false);
-    setSuccess(true);
-    onRegister?.({ name, email, password });
+  const handleGoogleSignUp = async () => {
+    setError('');
+    setIsGoogleLoading(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged in App.tsx will handle the redirect
+    } catch (err: any) {
+      if (err?.code !== 'auth/popup-closed-by-user') {
+        setError('Google sign-up failed. Please try again.');
+      }
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   const inputStyle = (extra?: React.CSSProperties): React.CSSProperties => ({
@@ -75,40 +97,16 @@ export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
     overflow: 'hidden',
   };
 
-  if (success) {
-    return (
-      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', fontFamily: 'inherit' }}>
-        <div style={{ textAlign: 'center', maxWidth: 400, padding: '2rem' }}>
-          <div style={{ width: 64, height: 64, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-            <span style={{ fontSize: 28 }}>✅</span>
-          </div>
-          <h2 style={{ fontSize: 26, fontWeight: 700, color: '#111827', marginBottom: 8 }}>Account created!</h2>
-          <p style={{ color: '#6b7280', fontSize: 15, marginBottom: 28 }}>
-            Welcome to RENTCHECK, <strong>{name}</strong>. Your account is ready.
-          </p>
-          <button
-            onClick={onLoginClick}
-            style={{ padding: '12px 28px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}
-          >
-            Go to Sign In
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'inherit' }}>
 
       {/* Left Panel */}
       <div style={panelStyle} className="hidden md:flex">
-        {/* Decorative rings */}
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, height: 500, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 720, height: 720, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: -80, left: -80, width: 320, height: 320, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -60, right: -100, width: 280, height: 280, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
 
-        {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative', zIndex: 1 }}>
           <div style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.15)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Package style={{ width: 24, height: 24, color: '#fff' }} />
@@ -119,7 +117,6 @@ export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
           </div>
         </div>
 
-        {/* Headline + features */}
         <div style={{ position: 'relative', zIndex: 1 }}>
           <h2 style={{ fontSize: 38, fontWeight: 300, color: '#fff', lineHeight: 1.3, marginBottom: 16 }}>
             Join RENTCHECK<br />
@@ -146,9 +143,8 @@ export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
       </div>
 
       {/* Right Panel */}
-      <div style={{ flex: 1, background: '#f9fafb', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem 1.5rem' }}>
+      <div style={{ flex: 1, background: '#f9fafb', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '3rem 1.5rem', overflowY: 'auto' }}>
 
-        {/* Mobile logo */}
         <div className="flex md:hidden" style={{ alignItems: 'center', gap: 10, marginBottom: 40 }}>
           <div style={{ width: 40, height: 40, background: '#2563eb', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Package style={{ width: 22, height: 22, color: '#fff' }} />
@@ -158,24 +154,19 @@ export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
 
         <div style={{ width: '100%', maxWidth: 420 }}>
 
-          {/* Back button */}
           {onBack && (
-            <button
-              onClick={onBack}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 14, marginBottom: 32, padding: 0 }}
-            >
+            <button onClick={onBack}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 14, marginBottom: 32, padding: 0 }}>
               <ArrowLeft style={{ width: 16, height: 16 }} />
               Back to site
             </button>
           )}
 
-          {/* Heading */}
           <div style={{ marginBottom: 28 }}>
             <h1 style={{ fontSize: 30, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Create your account</h1>
-            <p style={{ color: '#6b7280', fontSize: 15, margin: 0 }}>Start managing rentals with RENTCHECK</p>
+            <p style={{ color: '#6b7280', fontSize: 15, margin: 0 }}>Join RENTCHECK and start tracking today</p>
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit}>
 
             {/* Full Name */}
@@ -214,7 +205,7 @@ export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
               </div>
             </div>
 
-            {/* Phone (optional) */}
+            {/* Phone */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 6 }}>
                 Phone number <span style={{ color: '#9ca3af', fontWeight: 400 }}>(optional)</span>
@@ -253,7 +244,6 @@ export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
                   {showPassword ? <EyeOff style={{ width: 16, height: 16 }} /> : <Eye style={{ width: 16, height: 16 }} />}
                 </button>
               </div>
-              {/* Strength bar */}
               {password && (
                 <div style={{ marginTop: 8 }}>
                   <div style={{ display: 'flex', gap: 4 }}>
@@ -297,21 +287,18 @@ export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
               )}
             </div>
 
-            {/* Error */}
             {error && (
               <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 16 }}>
                 <p style={{ fontSize: 13, color: '#dc2626', margin: 0 }}>{error}</p>
               </div>
             )}
 
-            {/* Terms */}
             <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16, lineHeight: 1.6 }}>
               By creating an account you agree to our{' '}
               <a href="#" style={{ color: '#2563eb', textDecoration: 'none' }}>Terms of Service</a> and{' '}
               <a href="#" style={{ color: '#2563eb', textDecoration: 'none' }}>Privacy Policy</a>.
             </p>
 
-            {/* Submit */}
             <button
               type="submit"
               disabled={isLoading}
@@ -326,30 +313,35 @@ export function Register({ onRegister, onBack, onLoginClick }: RegisterProps) {
                   Creating account...
                 </>
               ) : (
-                <>
-                  Create Account
-                  <ArrowRight style={{ width: 16, height: 16 }} />
-                </>
+                <>Create Account <ArrowRight style={{ width: 16, height: 16 }} /></>
               )}
             </button>
           </form>
 
-          {/* Divider */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '24px 0' }}>
             <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
             <span style={{ fontSize: 12, color: '#9ca3af' }}>or</span>
             <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
           </div>
 
-          {/* Google SSO */}
-          <button type="button"
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '12px 24px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontWeight: 500, color: '#374151', cursor: 'pointer' }}>
-            <svg style={{ width: 18, height: 18 }} viewBox="0 0 24 24">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-            </svg>
+          <button
+            type="button"
+            onClick={handleGoogleSignUp}
+            disabled={isGoogleLoading}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '12px 24px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, fontWeight: 500, color: '#374151', cursor: isGoogleLoading ? 'not-allowed' : 'pointer', opacity: isGoogleLoading ? 0.7 : 1 }}>
+            {isGoogleLoading ? (
+              <svg className="animate-spin" style={{ width: 18, height: 18, color: '#6b7280' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            ) : (
+              <svg style={{ width: 18, height: 18 }} viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+              </svg>
+            )}
             Continue with Google
           </button>
 

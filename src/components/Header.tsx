@@ -1,15 +1,14 @@
-import { Package, ClipboardList, Menu, Plus, ShoppingBag, UserCircle } from 'lucide-react';
+import { Package, ClipboardList, Menu, Plus, ShoppingBag } from 'lucide-react';
 
 interface HeaderProps {
-  activeView: 'catalog' | 'tracker' | 'addItem' | 'rentedItems';
-  setActiveView: (view: 'catalog' | 'tracker' | 'addItem' | 'rentedItems') => void;
+  activeView: 'catalog' | 'tracker' | 'rentedItems';
+  setActiveView: (view: 'catalog' | 'tracker' | 'rentedItems') => void;
   onSignIn?: () => void;
   onRegister?: () => void;
   onAddItem?: () => void;
-  onViewProfile?: () => void;
 }
 
-export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddItem, onViewProfile }: HeaderProps) {
+export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddItem }: HeaderProps) {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="container mx-auto px-4">
@@ -62,11 +61,7 @@ export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddI
             </button>
             <button
               onClick={onAddItem}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                activeView === 'addItem'
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-50"
             >
               <Plus className="w-4 h-4" />
               Add Item
@@ -75,15 +70,6 @@ export function Header({ activeView, setActiveView, onSignIn, onRegister, onAddI
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            {/* TODO: Remove this button once auth flow is complete */}
-            <button
-              onClick={onViewProfile}
-              className="flex items-center gap-2 px-3 py-2 text-gray-500 hover:bg-gray-50 border border-dashed border-gray-300 rounded-lg transition-colors text-sm"
-              title="Temp: View User Profile"
-            >
-              <UserCircle className="w-4 h-4" />
-              My Profile
-            </button>
             <button
               onClick={onSignIn}
               className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
