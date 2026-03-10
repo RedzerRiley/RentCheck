@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { collection, onSnapshot, doc, updateDoc, increment, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, increment, query, orderBy, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
 import {
   Calendar, Clock, User, Package, AlertCircle,
   CheckCircle, XCircle, ChevronRight, Bell, Hourglass,
-  Tag, RotateCcw, X, Pencil, DollarSign, Hash, FileText, Image, Plus
+  Tag, RotateCcw, X, Pencil, DollarSign, Hash, FileText,
+  Image, Plus, Phone, MapPin, Truck, CreditCard, Wallet, Banknote, Receipt
 } from 'lucide-react';
 
 interface Rental {
@@ -24,6 +25,9 @@ interface Rental {
   days: number;
   estimatedCost: number;
   notes?: string;
+  deliveryMethod?: string;
+  paymentMethod?: string;
+  receiptId?: string;
   status: 'pending' | 'active' | 'returned' | 'overdue' | 'denied';
   createdAt?: any;
 }
@@ -43,8 +47,28 @@ interface ItemDoc {
   imageBase64?: string | null;
 }
 
+interface RenterProfile {
+  displayName?: string;
+  email?: string;
+  phone?: string;
+  street?: string;
+  city?: string;
+  zip?: string;
+}
+
 const CONDITIONS = ['New', 'Like New', 'Good', 'Fair'];
 const PRICE_UNITS = ['day', 'hour', 'week'];
+
+const DELIVERY_LABELS: Record<string, string> = {
+  pickup: 'Pickup',
+  lalamove: 'Lalamove Delivery',
+};
+const PAYMENT_LABELS: Record<string, string> = {
+  cash_pickup: 'Cash on Pickup',
+  cash_delivery: 'Cash on Delivery',
+  gcash: 'GCash / E-Wallet',
+  credit_card: 'Credit / Debit Card',
+};
 
 const inputStyle: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box', padding: '9px 12px',
@@ -61,6 +85,8 @@ export function RentalTracker() {
   const [processing, setProcessing] = useState(false);
   const [statusFilter, setStatusFilter] = useState('All');
   const [detailView, setDetailView] = useState<'rental' | 'editItem'>('rental');
+  const [renterProfile, setRenterProfile] = useState<RenterProfile | null>(null);
+  const [renterLoading, setRenterLoading] = useState(false);
 
   // Edit item form state
   const [editForm, setEditForm] = useState<ItemDoc & { tagInput: string } | null>(null);
@@ -95,7 +121,17 @@ export function RentalTracker() {
     });
   }, []);
 
-  // When switching to editItem view, seed form from live items map
+  // Fetch renter profile when a rental is selected
+  useEffect(() => {
+    if (!selected) { setRenterProfile(null); return; }
+    setRenterLoading(true);
+    getDoc(doc(db, 'users', selected.userId))
+      .then(snap => setRenterProfile(snap.exists() ? snap.data() as RenterProfile : null))
+      .catch(() => setRenterProfile(null))
+      .finally(() => setRenterLoading(false));
+  }, [selected?.id]);
+
+  // Seed edit form when switching to editItem view
   useEffect(() => {
     if (detailView === 'editItem' && selected) {
       const live = items[selected.itemId];
@@ -176,10 +212,10 @@ export function RentalTracker() {
   };
 
   return (
-    <div style={{ display: 'flex', gap: 22, height: 'calc(100vh - 200px)', minHeight: 500 }}>
+    <div style={{ display: 'flex', gap: 22, alignItems: 'flex-start' }}>
 
       {/* ── LEFT: list panel ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', width: 400, flexShrink: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', width: 400, flexShrink: 0, position: 'sticky', top: 16, maxHeight: 'calc(100vh - 90px)', overflow: 'hidden' }}>
         <div style={{ marginBottom: 18 }}>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: '0 0 3px' }}>Rental Tracker</h2>
           <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Manage all rental requests and returns</p>
@@ -217,7 +253,6 @@ export function RentalTracker() {
           </button>
         </div>
 
-        {/* Status filter for All tab */}
         {tab === 'all' && (
           <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
             {['All', 'Pending', 'Active', 'Overdue', 'Returned', 'Denied'].map(s => (
@@ -229,7 +264,6 @@ export function RentalTracker() {
           </div>
         )}
 
-        {/* Rental list */}
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
           {loading ? (
             <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: 13, marginTop: 40 }}>Loading...</p>
@@ -281,65 +315,142 @@ export function RentalTracker() {
             <p style={{ fontSize: 12, margin: 0 }}>Click any item in the list to see details and actions.</p>
           </div>
         ) : detailView === 'rental' ? (
-          <>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             {/* Detail header */}
-            <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', padding: '18px 22px', position: 'relative', flexShrink: 0 }}>
-              <button onClick={() => setSelected(null)} style={{ position: 'absolute', top: 12, right: 12, width: 28, height: 28, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                <X style={{ width: 13, height: 13 }} />
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 46, height: 46, background: 'rgba(255,255,255,0.15)', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Package style={{ width: 22, height: 22, color: '#fff' }} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 10, color: 'rgba(191,219,254,0.85)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Rental Request</div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#fff' }}>{selected.itemName}</div>
-                  <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center' }}>
-                    <span style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '2px 9px', fontSize: 11, color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}><Tag style={{ width: 10, height: 10 }} />{selected.itemCategory}</span>
-                    <span style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '2px 9px', fontSize: 11, color: '#fff', fontWeight: 600 }}>{selected.itemPriceLabel}</span>
-                    {statusBadge(selected.status)}
-                    {/* Edit item button */}
-                    <button onClick={() => setDetailView('editItem')}
-                      style={{ marginLeft: 4, display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, fontSize: 11, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
-                      <Pencil style={{ width: 10, height: 10 }} /> Edit Item
-                    </button>
+            <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', padding: '18px 22px', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 42, height: 42, background: 'rgba(255,255,255,0.15)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Package style={{ width: 20, height: 20, color: '#fff' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: 'rgba(191,219,254,0.85)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 1 }}>Rental Request</div>
+                    <div style={{ fontSize: 17, fontWeight: 700, color: '#fff' }}>{selected.itemName}</div>
                   </div>
                 </div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <button onClick={() => setDetailView('editItem')}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 11px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, fontSize: 11, fontWeight: 600, color: '#fff', cursor: 'pointer' }}>
+                    <Pencil style={{ width: 10, height: 10 }} /> Edit Item
+                  </button>
+                  <button onClick={() => setSelected(null)} style={{ width: 28, height: 28, background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                    <X style={{ width: 13, height: 13 }} />
+                  </button>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '2px 9px', fontSize: 11, color: '#fff', display: 'flex', alignItems: 'center', gap: 4 }}><Tag style={{ width: 10, height: 10 }} />{selected.itemCategory}</span>
+                <span style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '2px 9px', fontSize: 11, color: '#fff', fontWeight: 600 }}>{selected.itemPriceLabel}</span>
+                {statusBadge(selected.status)}
               </div>
             </div>
 
-            {/* Detail body */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
-                <div style={{ background: '#f8fafc', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 5 }}><User style={{ width: 11, height: 11 }} />Renter</div>
-                  <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 500, wordBreak: 'break-all' }}>{selected.userEmail}</div>
+            {/* Detail body - scrollable */}
+            <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* ── RENTER DETAILS ── */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+                <div style={{ background: '#f1f5f9', padding: '10px 14px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <User style={{ width: 13, height: 13, color: '#2563eb' }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Renter Information</span>
                 </div>
-                <div style={{ background: '#f8fafc', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7 }}>Estimated Cost</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: '#2563eb' }}>₱{selected.estimatedCost}</div>
-                  <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{selected.days} day{selected.days !== 1 ? 's' : ''} × {selected.itemPriceLabel}</div>
+                {renterLoading ? (
+                  <div style={{ padding: '14px', fontSize: 12, color: '#9ca3af' }}>Loading renter details...</div>
+                ) : (
+                  <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {/* Row 1: Name + Email */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <DetailField label="Full Name" value={renterProfile?.displayName || '—'} />
+                      <DetailField label="Email" value={selected.userEmail} />
+                    </div>
+                    {/* Row 2: Phone + Address */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <DetailField label="Phone" value={renterProfile?.phone || '—'} Icon={Phone} />
+                      <DetailField label="Address" value={
+                        renterProfile?.street
+                          ? `${renterProfile.street}, ${renterProfile.city || ''} ${renterProfile.zip || ''}`.trim().replace(/,\s*$/, '')
+                          : '—'
+                      } Icon={MapPin} />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ── TRANSACTION RECEIPT ── */}
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+                <div style={{ background: '#f1f5f9', padding: '10px 14px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <Receipt style={{ width: 13, height: 13, color: '#2563eb' }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Transaction Receipt</span>
+                  </div>
+                  {selected.receiptId && (
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', fontFamily: 'monospace', letterSpacing: '0.05em' }}>{selected.receiptId}</span>
+                  )}
                 </div>
-                <div style={{ background: '#f8fafc', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 5 }}><Calendar style={{ width: 11, height: 11 }} />Period</div>
-                  <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 600 }}>{selected.startDate}</div>
-                  <div style={{ fontSize: 11, color: '#9ca3af', margin: '2px 0' }}>to</div>
-                  <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 600 }}>{selected.endDate}</div>
-                </div>
-                <div style={{ background: '#f8fafc', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 5 }}><Clock style={{ width: 11, height: 11 }} />Requested On</div>
-                  <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 500 }}>{selected.rentedDate}</div>
+                <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {/* Period + Days + Cost */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 9, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Calendar style={{ width: 10, height: 10 }} /> Period
+                      </div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#1e40af' }}>{selected.startDate}</div>
+                      <div style={{ fontSize: 10, color: '#93c5fd', margin: '1px 0' }}>→</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#1e40af' }}>{selected.endDate}</div>
+                    </div>
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 9, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Clock style={{ width: 10, height: 10 }} /> Duration
+                      </div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: '#1e293b', lineHeight: 1 }}>{selected.days}</div>
+                      <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>day{selected.days !== 1 ? 's' : ''}</div>
+                    </div>
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Total Est.</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: '#059669', lineHeight: 1 }}>₱{selected.estimatedCost}</div>
+                      <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{selected.itemPriceLabel}</div>
+                    </div>
+                  </div>
+
+                  {/* Delivery + Payment */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 9, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Truck style={{ width: 10, height: 10 }} /> Delivery
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: selected.deliveryMethod ? '#6d28d9' : '#9ca3af' }}>
+                        {selected.deliveryMethod ? (DELIVERY_LABELS[selected.deliveryMethod] ?? selected.deliveryMethod) : 'Not specified'}
+                      </div>
+                    </div>
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 9, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <CreditCard style={{ width: 10, height: 10 }} /> Payment
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: selected.paymentMethod ? '#059669' : '#9ca3af' }}>
+                        {selected.paymentMethod ? (PAYMENT_LABELS[selected.paymentMethod] ?? selected.paymentMethod) : 'Not specified'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submitted on */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', paddingTop: 4, borderTop: '1px solid #f1f5f9' }}>
+                    <span>Requested on {selected.rentedDate}</span>
+                    <span>Due: {selected.dueDate}</span>
+                  </div>
                 </div>
               </div>
 
+              {/* Notes */}
               {selected.notes && (
-                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 16px', marginBottom: 18 }}>
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 14px' }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5 }}>Note from renter</div>
                   <p style={{ fontSize: 13, color: '#78350f', margin: 0, lineHeight: 1.6 }}>{selected.notes}</p>
                 </div>
               )}
+            </div>
 
-              {/* Actions */}
+            {/* ── ACTIONS — pinned footer ── */}
+            <div style={{ padding: '14px 22px', borderTop: '1px solid #f1f5f9', flexShrink: 0, background: '#fff' }}>
               {selected.status === 'pending' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '11px 14px', display: 'flex', gap: 10 }}>
@@ -375,10 +486,10 @@ export function RentalTracker() {
                 </div>
               )}
             </div>
-          </>
+          </div>
         ) : (
           /* ── Edit Item view ── */
-          <>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             <div style={{ padding: '16px 22px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: '#fff' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <button onClick={() => setDetailView('rental')}
@@ -395,7 +506,7 @@ export function RentalTracker() {
               </button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               {!editForm ? (
                 <p style={{ color: '#9ca3af', fontSize: 13 }}>Item not found in catalog.</p>
               ) : (
@@ -501,7 +612,6 @@ export function RentalTracker() {
                     )}
                   </div>
 
-                  {/* Feedback */}
                   {editError && (
                     <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '9px 13px', display: 'flex', alignItems: 'center', gap: 7 }}>
                       <AlertCircle style={{ width: 13, height: 13, color: '#dc2626', flexShrink: 0 }} />
@@ -514,20 +624,33 @@ export function RentalTracker() {
                       <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>Saved successfully!</span>
                     </div>
                   )}
-
-                  {/* Save/Cancel */}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => setDetailView('rental')} style={{ flex: 1, padding: '10px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151' }}>Cancel</button>
-                    <button onClick={handleEditItemSave} disabled={editSaving} style={{ flex: 2, padding: '10px', background: editSaving ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: editSaving ? 'not-allowed' : 'pointer' }}>
-                      {editSaving ? 'Saving...' : 'Save Changes'}
-                    </button>
-                  </div>
                 </>
               )}
             </div>
-          </>
+
+            {/* Pinned save/cancel footer */}
+            <div style={{ padding: '14px 22px', borderTop: '1px solid #f1f5f9', flexShrink: 0, background: '#fff' }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setDetailView('rental')} style={{ flex: 1, padding: '10px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151' }}>Cancel</button>
+                <button onClick={handleEditItemSave} disabled={editSaving} style={{ flex: 2, padding: '10px', background: editSaving ? '#93c5fd' : '#2563eb', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: editSaving ? 'not-allowed' : 'pointer' }}>
+                  {editSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function DetailField({ label, value, Icon }: { label: string; value: string; Icon?: any }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+        {Icon && <Icon style={{ width: 10, height: 10 }} />}{label}
+      </div>
+      <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 500, wordBreak: 'break-word' }}>{value}</div>
     </div>
   );
 }

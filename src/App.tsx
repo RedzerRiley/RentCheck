@@ -96,10 +96,13 @@ function AuthenticatedApp({ currentUser }: { currentUser: User }) {
 
   // Regular users must complete their profile before pending/verified checks
   const profileComplete = role !== 'user' || (
-    !!(userData?.displayName?.trim()) &&
+    !!(userData?.firstName?.trim()) &&
+    !!(userData?.lastName?.trim()) &&
     !!(userData?.phone?.trim()) &&
     !!(userData?.street?.trim()) &&
+    !!(userData?.brgy?.trim()) &&
     !!(userData?.city?.trim()) &&
+    !!(userData?.region?.trim()) &&
     !!(userData?.zip?.trim())
   );
 
@@ -118,10 +121,13 @@ function AuthenticatedApp({ currentUser }: { currentUser: User }) {
 
   if (!isVerified) {
     const profileComplete = !!(
-      userData?.displayName?.trim() &&
+      userData?.firstName?.trim() &&
+      userData?.lastName?.trim() &&
       userData?.phone?.trim() &&
       userData?.street?.trim() &&
+      userData?.brgy?.trim() &&
       userData?.city?.trim() &&
+      userData?.region?.trim() &&
       userData?.zip?.trim()
     );
 
@@ -130,6 +136,8 @@ function AuthenticatedApp({ currentUser }: { currentUser: User }) {
         <ProfileSetup
           userId={currentUser.uid}
           initialName={userData?.displayName || currentUser.displayName || ''}
+          initialEmail={currentUser.email || ''}
+          initialPhone={userData?.phone || ''}
           onComplete={() => {/* userData will update via onSnapshot automatically */}}
         />
       );
@@ -178,7 +186,7 @@ function AuthenticatedApp({ currentUser }: { currentUser: User }) {
       />
       {activeView === 'catalog' && <HeroSection />}
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4" style={{ paddingTop: activeView === 'tracker' ? 16 : 32, paddingBottom: activeView === 'tracker' ? 0 : 32 }}>
         {activeView === 'catalog' && <div id="catalog-section"><ItemCatalog isPrivileged={isPrivileged} /></div>}
         {/* Rental Tracker — privileged only */}
         {activeView === 'tracker' && isPrivileged && <RentalTracker />}
