@@ -74,7 +74,7 @@ cd RentCheck
 npm install
 
 # 3. Set up environment variables
-.env file is only given by the code owners.
+get it from your firebase console. 
 
 # Fill in your Firebase config values in .env
 
