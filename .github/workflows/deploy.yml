@@ -1,4 +1,4 @@
-name: Build & Deploy to Firebase Hosting
+name: Build & Deploy to Firebase
 
 on:
   push:
@@ -15,61 +15,49 @@ on:
       - '.github/*.md'
 
 jobs:
-  build_and_deploy:
-    name: Build & Deploy
+
+  # ── JOB 1: Build & Deploy Frontend to Firebase Hosting ──────────────────
+  deploy_hosting:
+    name: Deploy Hosting
     runs-on: ubuntu-latest
+    if: |
+      contains(join(github.event.commits.*.modified, ' '), 'src/') ||
+      contains(join(github.event.commits.*.modified, ' '), 'public/') ||
+      contains(join(github.event.commits.*.added, ' '), 'src/') ||
+      contains(join(github.event.commits.*.modified, ' '), 'index.html') ||
+      contains(join(github.event.commits.*.modified, ' '), 'vite.config') ||
+      contains(join(github.event.commits.*.modified, ' '), 'package.json') ||
+      github.event_name == 'pull_request'
 
     steps:
-      # 1. Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Setup Node
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      # 3. Install dependencies
-      - name: Install frontend dependencies
+      - name: Install dependencies
         run: npm ci
 
-      # 4. Create frontend .env for Vite
-      - name: Create frontend .env
+      - name: Create .env file
         run: |
-          echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" > .env
+          echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> .env
           echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> .env
           echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> .env
           echo "VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}" >> .env
           echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}" >> .env
           echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> .env
           echo "VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}" >> .env
+          echo "VITE_BREVO_API_KEY=${{ secrets.VITE_BREVO_API_KEY }}" >> .env
+          echo "VITE_BREVO_SENDER_EMAIL=${{ secrets.VITE_BREVO_SENDER_EMAIL }}" >> .env
+          echo "VITE_BREVO_SENDER_NAME=${{ secrets.VITE_BREVO_SENDER_NAME }}" >> .env
 
-      # 5. Create Functions environment for Brevo
-      - name: Create functions .env
-        run: |
-          mkdir -p functions
-          echo "BREVO_API_KEY=${{ secrets.BREVO_API_KEY }}" > functions/.env
-          echo "BREVO_SENDER_EMAIL=${{ secrets.BREVO_SENDER_EMAIL }}" >> functions/.env
-          echo "BREVO_SENDER_NAME=${{ secrets.BREVO_SENDER_NAME }}" >> functions/.env
-
-      # 6. Install Firebase CLI
-      - name: Install Firebase CLI
-        run: npm install -g firebase-tools
-
-      # 7. Build frontend
-      - name: Build frontend
+      - name: Build
         run: npm run build
 
-      # 8. Deploy Firebase Functions
-      - name: Deploy Firebase Functions
-        run: |
-          cd functions
-          npm ci
-          firebase deploy --only functions --project ${{ secrets.VITE_FIREBASE_PROJECT_ID }} --token ${{ secrets.FIREBASE_TOKEN }}
-
-      # 9. Deploy Live Hosting
       - name: Deploy to Firebase Hosting (Live — main branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -79,7 +67,6 @@ jobs:
           channelId: live
           projectId: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
 
-      # 10. Deploy Preview Hosting
       - name: Deploy to Firebase Hosting (Preview — pull request)
         if: github.event_name == 'pull_request'
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -87,3 +74,42 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+
+
+  # ── JOB 2: Deploy Cloud Functions ───────────────────────────────────────
+  deploy_functions:
+    name: Deploy Functions
+    runs-on: ubuntu-latest
+    if: |
+      contains(join(github.event.commits.*.modified, ' '), 'functions/') ||
+      contains(join(github.event.commits.*.added, ' '), 'functions/') ||
+      github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install functions dependencies
+        run: npm ci
+        working-directory: functions
+
+      - name: Build functions (TypeScript → JS)
+        run: npm run build
+        working-directory: functions
+
+      - name: Deploy Cloud Functions (main branch only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
