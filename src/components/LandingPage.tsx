@@ -94,7 +94,7 @@ export function LandingPage({ onSignIn, onRegister }: LandingPageProps) {
               }}
               onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = scrolled ? '#1648c0' : 'rgba(255,255,255,0.28)'}
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = scrolled ? '#1a56db' : 'rgba(255,255,255,0.18)'}>
-              Get Started Free
+              Get Started
             </button>
           </div>
         </div>
@@ -218,7 +218,7 @@ export function LandingPage({ onSignIn, onRegister }: LandingPageProps) {
             Ready to take control of your rentals?
           </h2>
           <p style={{ color: 'rgba(191,219,254,0.85)', fontSize: 16, lineHeight: 1.7, marginBottom: 36 }}>
-            Join hundreds of teams already using RENTCHECK to save time, reduce losses, and keep customers happy.
+            Join hundreds of teams already using RentCheck to save time, reduce losses, and keep customers happy.
           </p>
           <button onClick={onRegister} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 36px', background: '#fff', border: 'none', borderRadius: 10, color: '#1a56db', fontSize: 15, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.3)', transition: 'all 0.2s' }}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'}

@@ -125,7 +125,7 @@ export function Register({ onBack, onLoginClick }: RegisterProps) {
             Set up your account and start managing rentals, tracking returns, and organizing inventory.
           </p>
           {[
-            'Get started immediately after sign up',
+            'Get verified to start using RentCheck!',
             'Role-based team collaboration',
             'Full rental history & item tracking',
           ].map(f => (
