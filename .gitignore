@@ -7,13 +7,13 @@
 .env.*.local
 
 # Dependencies
-node_modules
+node_modules/
 
 # Vite / React build folder
 build/
 
 # Build output
-dist
+dist/
 
 # Firebase
 .firebase

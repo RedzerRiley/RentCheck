@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/firebase';
+import { sendVerificationEmail } from '../services/EmailService';
 import {
   ArrowLeft, Search, CheckCircle, Clock, Users,
   User, ShieldCheck, ShieldOff, Crown, UserCog, Shield, X, Phone, MapPin, Mail
@@ -35,15 +36,16 @@ const ROLE_CONFIG = {
 
 export function VerifyUsers({ onBack, currentUserRole }: VerifyUsersProps) {
   const isAdmin = currentUserRole === 'admin';
-  const [users, setUsers] = useState<UserData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<FilterTab>('all');
-  const [selected, setSelected] = useState<UserData | null>(null);
-  const [updating, setUpdating] = useState(false);
+  const [users, setUsers]               = useState<UserData[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [search, setSearch]             = useState('');
+  const [filter, setFilter]             = useState<FilterTab>('all');
+  const [selected, setSelected]         = useState<UserData | null>(null);
+  const [updating, setUpdating]         = useState(false);
   const [promoteConfirm, setPromoteConfirm] = useState(false);
-  const [demoteConfirm, setDemoteConfirm] = useState(false);
-  const [revokeConfirm, setRevokeConfirm] = useState(false);
+  const [demoteConfirm, setDemoteConfirm]   = useState(false);
+  const [revokeConfirm, setRevokeConfirm]   = useState(false);
+  const [emailStatus, setEmailStatus]       = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'users'), snap => {
@@ -64,20 +66,64 @@ export function VerifyUsers({ onBack, currentUserRole }: VerifyUsersProps) {
     setPromoteConfirm(false);
     setDemoteConfirm(false);
     setRevokeConfirm(false);
+    setEmailStatus('idle');
   };
 
+  // ── Verify / Revoke ──────────────────────────────────────────────────────
   const handleVerify = async (uid: string, verified: boolean) => {
     setUpdating(true);
-    try { await updateDoc(doc(db, 'users', uid), { verified }); }
-    finally { setUpdating(false); setRevokeConfirm(false); }
+    try {
+      await updateDoc(doc(db, 'users', uid), { verified });
+
+      // Only send email when granting verification, not when revoking
+      if (verified) {
+        const target = users.find(u => u.uid === uid);
+        if (target?.email) {
+          setEmailStatus('sending');
+          try {
+            await sendVerificationEmail({
+              toEmail: target.email,
+              toName:  target.displayName || 'there',
+            });
+            setEmailStatus('sent');
+          } catch {
+            setEmailStatus('error');
+          }
+        }
+      }
+    } finally {
+      setUpdating(false);
+      setRevokeConfirm(false);
+    }
   };
 
+  // ── Promote to Staff ─────────────────────────────────────────────────────
   const handlePromoteToStaff = async (uid: string) => {
     setUpdating(true);
-    try { await updateDoc(doc(db, 'users', uid), { role: 'staff', verified: true }); }
-    finally { setUpdating(false); setPromoteConfirm(false); }
+    try {
+      await updateDoc(doc(db, 'users', uid), { role: 'staff', verified: true });
+
+      // Send verification email only if user wasn't already verified
+      const target = users.find(u => u.uid === uid);
+      if (target?.email && !target.verified) {
+        setEmailStatus('sending');
+        try {
+          await sendVerificationEmail({
+            toEmail: target.email,
+            toName:  target.displayName || 'there',
+          });
+          setEmailStatus('sent');
+        } catch {
+          setEmailStatus('error');
+        }
+      }
+    } finally {
+      setUpdating(false);
+      setPromoteConfirm(false);
+    }
   };
 
+  // ── Demote to User ───────────────────────────────────────────────────────
   const handleDemoteToUser = async (uid: string) => {
     setUpdating(true);
     try { await updateDoc(doc(db, 'users', uid), { role: 'user' }); }
@@ -157,8 +203,6 @@ export function VerifyUsers({ onBack, currentUserRole }: VerifyUsersProps) {
 
         {/* ── TABLE CARD ── */}
         <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-
-          {/* Toolbar */}
           <div style={{ padding: '18px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ position: 'relative', flex: 1, minWidth: 220, maxWidth: 340 }}>
               <Search style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: '#94a3b8' }} />
@@ -175,7 +219,6 @@ export function VerifyUsers({ onBack, currentUserRole }: VerifyUsersProps) {
             </div>
           </div>
 
-          {/* Table */}
           {loading ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8', fontSize: 14 }}>Loading users...</div>
           ) : filtered.length === 0 ? (
@@ -197,7 +240,8 @@ export function VerifyUsers({ onBack, currentUserRole }: VerifyUsersProps) {
                   const roleCfg = ROLE_CONFIG[u.role] ?? ROLE_CONFIG.user;
                   const RoleIcon = roleCfg.Icon;
                   return (
-                    <tr key={u.uid} onClick={() => { setSelected(u); setPromoteConfirm(false); setDemoteConfirm(false); setRevokeConfirm(false); }}
+                    <tr key={u.uid}
+                      onClick={() => { setSelected(u); setPromoteConfirm(false); setDemoteConfirm(false); setRevokeConfirm(false); setEmailStatus('idle'); }}
                       style={{ borderBottom: i < filtered.length - 1 ? '1px solid #f8fafc' : 'none', cursor: 'pointer', transition: 'background 0.1s' }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#f8fafc'}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
@@ -239,11 +283,9 @@ export function VerifyUsers({ onBack, currentUserRole }: VerifyUsersProps) {
       {/* ── MODAL ── */}
       {selected && (
         <>
-          {/* Backdrop */}
           <div onClick={closeModal}
             style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(3px)', zIndex: 100 }} />
 
-          {/* Modal panel */}
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100%', maxWidth: 480, background: '#fff', borderRadius: 20, boxShadow: '0 24px 80px rgba(0,0,0,0.2)', zIndex: 101, overflow: 'hidden' }}>
 
             {/* Modal header */}
@@ -260,7 +302,6 @@ export function VerifyUsers({ onBack, currentUserRole }: VerifyUsersProps) {
                         Joined {new Date(selected.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                       </div>
                     )}
-                    {/* Role + status badges */}
                     <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
                       {(() => { const rc = ROLE_CONFIG[selected.role]; const RI = rc.Icon; return (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}>
@@ -285,8 +326,8 @@ export function VerifyUsers({ onBack, currentUserRole }: VerifyUsersProps) {
             {/* Modal body */}
             <div style={{ padding: '20px 24px' }}>
 
-              {/* Contact info */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+              {/* Contact cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
                 <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <Mail style={{ width: 14, height: 14, color: '#64748b', marginTop: 2, flexShrink: 0 }} />
                   <div>
@@ -311,6 +352,29 @@ export function VerifyUsers({ onBack, currentUserRole }: VerifyUsersProps) {
                   </div>
                 </div>
               </div>
+
+              {/* ── EMAIL STATUS BANNER ── */}
+              {emailStatus === 'sending' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+                  <svg style={{ width: 14, height: 14, color: '#2563eb', flexShrink: 0, animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  <span style={{ fontSize: 12, color: '#1d4ed8', fontWeight: 500 }}>Sending notification email...</span>
+                </div>
+              )}
+              {emailStatus === 'sent' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#ecfdf5', border: '1px solid #6ee7b7', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+                  <CheckCircle style={{ width: 14, height: 14, color: '#059669', flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: '#047857', fontWeight: 500 }}>✓ Verification email sent to {selected.email}</span>
+                </div>
+              )}
+              {emailStatus === 'error' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+                  <X style={{ width: 14, height: 14, color: '#dc2626', flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 500 }}>User verified, but email notification failed to send.</span>
+                </div>
+              )}
 
               {/* ── ACTIONS ── */}
               <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 16 }}>
@@ -356,6 +420,13 @@ export function VerifyUsers({ onBack, currentUserRole }: VerifyUsersProps) {
                           </div>
                         </div>
                       )
+                    )}
+
+                    {!isAdmin && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                        <Shield style={{ width: 16, height: 16, color: '#94a3b8' }} />
+                        <span style={{ fontSize: 13, color: '#64748b' }}>Only admins can change roles.</span>
+                      </div>
                     )}
                   </div>
                 )}
