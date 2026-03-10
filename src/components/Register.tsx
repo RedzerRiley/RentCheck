@@ -118,7 +118,7 @@ export function Register({ onBack, onLoginClick }: RegisterProps) {
             <span style={{ fontSize: 12, color: '#93c5fd', fontWeight: 600 }}>Create your account</span>
           </div>
           <h2 style={{ fontSize: 34, fontWeight: 800, color: '#f1f5f9', lineHeight: 1.25, marginBottom: 16, letterSpacing: '-0.5px' }}>
-            Join RENTCHECK<br />
+            Join RentCheck<br />
             <span style={{ color: '#60a5fa' }}>get verified.</span>
           </h2>
           <p style={{ color: '#64748b', fontSize: 15, lineHeight: 1.75, maxWidth: 300, marginBottom: 36 }}>
