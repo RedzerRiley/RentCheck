@@ -74,7 +74,8 @@ cd RentCheck
 npm install
 
 # 3. Set up environment variables
-cp .env.example .env
+.env file is only given by the code owners.
+
 # Fill in your Firebase config values in .env
 
 # 4. Start the development server
