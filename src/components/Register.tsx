@@ -119,7 +119,7 @@ export function Register({ onBack, onLoginClick }: RegisterProps) {
           </div>
           <h2 style={{ fontSize: 34, fontWeight: 800, color: '#f1f5f9', lineHeight: 1.25, marginBottom: 16, letterSpacing: '-0.5px' }}>
             Join RENTCHECK<br />
-            <span style={{ color: '#60a5fa' }}>in minutes.</span>
+            <span style={{ color: '#60a5fa' }}>get verified.</span>
           </h2>
           <p style={{ color: '#64748b', fontSize: 15, lineHeight: 1.75, maxWidth: 300, marginBottom: 36 }}>
             Set up your account and start managing rentals, tracking returns, and organizing inventory.
@@ -161,7 +161,7 @@ export function Register({ onBack, onLoginClick }: RegisterProps) {
           )}
 
           <h1 style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', marginBottom: 4, letterSpacing: '-0.3px' }}>Create your account</h1>
-          <p style={{ color: '#64748b', fontSize: 14, margin: '0 0 24px' }}>Join RENTCHECK and start tracking today</p>
+          <p style={{ color: '#64748b', fontSize: 14, margin: '0 0 24px' }}>Join RentCheck and start tracking today</p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
