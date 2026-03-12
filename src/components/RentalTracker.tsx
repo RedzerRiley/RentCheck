@@ -215,14 +215,14 @@ export function RentalTracker() {
     <div style={{ display: 'flex', gap: 22, alignItems: 'flex-start' }}>
 
       {/* ── LEFT: list panel ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', width: 400, flexShrink: 0, position: 'sticky', top: 16, maxHeight: 'calc(100vh - 90px)', overflow: 'hidden' }}>
-        <div style={{ marginBottom: 18 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', width: 400, flexShrink: 0, position: 'sticky', top: 16, height: 'calc(100vh - 80px)', overflow: 'hidden' }}>
+        <div style={{ marginBottom: 18, flexShrink: 0 }}>
           <h2 style={{ fontSize: 22, fontWeight: 700, color: '#111827', margin: '0 0 3px' }}>Rental Tracker</h2>
           <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Manage all rental requests and returns</p>
         </div>
 
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16, flexShrink: 0 }}>
           {[
             { label: 'Pending',  n: counts.pending,  color: '#b45309', bg: '#fffbeb', Icon: Hourglass },
             { label: 'Active',   n: counts.active,   color: '#2563eb', bg: '#eff6ff', Icon: Clock },
@@ -240,7 +240,7 @@ export function RentalTracker() {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 10, padding: 3, marginBottom: 12, gap: 3 }}>
+        <div style={{ display: 'flex', background: '#f3f4f6', borderRadius: 10, padding: 3, marginBottom: 12, gap: 3, flexShrink: 0 }}>
           <button onClick={() => setTab('pending')}
             style={{ flex: 1, padding: '8px', borderRadius: 7, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 12, background: tab === 'pending' ? '#fff' : 'transparent', color: tab === 'pending' ? '#1e40af' : '#6b7280', boxShadow: tab === 'pending' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
             <Bell style={{ width: 13, height: 13 }} />
@@ -254,7 +254,7 @@ export function RentalTracker() {
         </div>
 
         {tab === 'all' && (
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10, flexShrink: 0 }}>
             {['All', 'Pending', 'Active', 'Overdue', 'Returned', 'Denied'].map(s => (
               <button key={s} onClick={() => setStatusFilter(s)}
                 style={{ padding: '4px 10px', borderRadius: 20, border: 'none', fontSize: 11, fontWeight: 500, cursor: 'pointer', background: statusFilter === s ? '#2563eb' : '#f3f4f6', color: statusFilter === s ? '#fff' : '#6b7280' }}>
@@ -307,7 +307,7 @@ export function RentalTracker() {
       </div>
 
       {/* ── RIGHT: detail panel ── */}
-      <div style={{ flex: 1, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'sticky', top: 16, height: 'calc(100vh - 80px)' }}>
         {!selected ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#9ca3af', padding: 40 }}>
             <Package style={{ width: 44, height: 44, marginBottom: 12, opacity: 0.2 }} />
@@ -315,7 +315,7 @@ export function RentalTracker() {
             <p style={{ fontSize: 12, margin: 0 }}>Click any item in the list to see details and actions.</p>
           </div>
         ) : detailView === 'rental' ? (
-          <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             {/* Detail header */}
             <div style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', padding: '18px 22px', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -346,7 +346,7 @@ export function RentalTracker() {
             </div>
 
             {/* Detail body - scrollable */}
-            <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 16, flex: '1 1 0', overflowY: 'auto', minHeight: 0 }}>
 
               {/* ── RENTER DETAILS ── */}
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
@@ -489,7 +489,7 @@ export function RentalTracker() {
           </div>
         ) : (
           /* ── Edit Item view ── */
-          <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
             <div style={{ padding: '16px 22px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: '#fff' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <button onClick={() => setDetailView('rental')}
@@ -506,7 +506,7 @@ export function RentalTracker() {
               </button>
             </div>
 
-            <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 14, flex: '1 1 0', overflowY: 'auto', minHeight: 0 }}>
               {!editForm ? (
                 <p style={{ color: '#9ca3af', fontSize: 13 }}>Item not found in catalog.</p>
               ) : (

@@ -135,7 +135,7 @@ function AuthenticatedApp({ currentUser }: { currentUser: User }) {
 
   // ── Main app ─────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f9fafb' }}>
       <AppHeader
         activeView={activeView}
         setActiveView={setActiveView}
@@ -150,7 +150,13 @@ function AuthenticatedApp({ currentUser }: { currentUser: User }) {
       />
       {activeView === 'catalog' && <HeroSection />}
 
-      <main className="container mx-auto px-4" style={{ paddingTop: activeView === 'tracker' ? 16 : 32, paddingBottom: activeView === 'tracker' ? 0 : 32 }}>
+      <main
+        className="container mx-auto px-4"
+        style={{
+          paddingTop: activeView === 'tracker' ? 16 : 32,
+          paddingBottom: activeView === 'tracker' ? 16 : 32,
+        }}
+      >
         {activeView === 'catalog'     && <div id="catalog-section"><ItemCatalog isPrivileged={isPrivileged} /></div>}
         {activeView === 'tracker'     && isPrivileged && <RentalTracker />}
         {activeView === 'rentedItems' && <RentedItems />}
